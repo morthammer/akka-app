@@ -1,0 +1,11 @@
+target/
+.project
+.settings/
+.cache
+.classpath
+.DS_Store
+build.number
+.idea/
+*.swp
+*.swo
+/tags
