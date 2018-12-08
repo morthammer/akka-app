@@ -3,6 +3,7 @@ package com.basement.FSM
 import akka.actor.ActorSystem
 import akka.http.scaladsl.model.headers.HttpCookiePair
 import akka.testkit.{ImplicitSender, TestActorRef, TestKit, TestProbe}
+import com.basement.FSM.PlotWorker.RequestFormatException
 import com.basement.domain._
 import com.basement.services.GeoPointManagerDAO
 import org.joda.time.DateTime
@@ -46,7 +47,7 @@ class PlotWorkerUnitSpec extends TestKit(ActorSystem("MySpec")) with ImplicitSen
     "identify a plot by cookie token and reply with geoPlot without refreshing weather" in {
       val actorRef = TestActorRef(new PlotWorker(dependencies))
 
-      actorRef ! IdentifyGeoPlot(Some(wtCookie))
+      actorRef ! IdentifyGeoPlot(wtCookie)
 
       geoPlotLookup.expectMsg(FindByToken(wtCookie.value))
       geoPlotLookup.reply(Some(geoPlot))
@@ -55,7 +56,7 @@ class PlotWorkerUnitSpec extends TestKit(ActorSystem("MySpec")) with ImplicitSen
     }
    "return failure when geoPlotLookup fails" in {
      val actorRef = TestActorRef(new PlotWorker(dependencies))
-     actorRef ! IdentifyGeoPlot(Some(wtCookie))
+     actorRef ! IdentifyGeoPlot(wtCookie)
 
      geoPlotLookup.expectMsg(FindByToken(wtCookie.value))
      geoPlotLookup.reply(ex)
@@ -72,7 +73,7 @@ class PlotWorkerUnitSpec extends TestKit(ActorSystem("MySpec")) with ImplicitSen
 
       val points = Vector(ptExpired, ptExpired2, point)
       val actorRef = TestActorRef(new PlotWorker(dependencies))
-      actorRef ! IdentifyGeoPlot(Some(wtCookie))
+      actorRef ! IdentifyGeoPlot(wtCookie)
 
       geoPlotLookup.expectMsg(FindByToken(wtCookie.value))
       geoPlotLookup.reply(Some(geoPlot.copy(points = points)))
@@ -94,7 +95,7 @@ class PlotWorkerUnitSpec extends TestKit(ActorSystem("MySpec")) with ImplicitSen
 
      val points = Vector(ptExpired, ptExpired2, point)
      val actorRef = TestActorRef(new PlotWorker(dependencies))
-     actorRef ! IdentifyGeoPlot(Some(wtCookie))
+     actorRef ! IdentifyGeoPlot(wtCookie)
 
      geoPlotLookup.expectMsg(FindByToken(wtCookie.value))
      geoPlotLookup.reply(Some(geoPlot.copy(points = points)))
@@ -104,7 +105,7 @@ class PlotWorkerUnitSpec extends TestKit(ActorSystem("MySpec")) with ImplicitSen
 
      geoPointManager.expectNoMsg()
 
-     expectMsg(Failure(ex))
+     expectMsg(Failure(RequestFormatException("Weather could not be found")))
    }
   }
   "the create geo plot message to plot handler" should{
@@ -119,7 +120,7 @@ class PlotWorkerUnitSpec extends TestKit(ActorSystem("MySpec")) with ImplicitSen
       geoPlotManager.reply(Some(2l))
 
       geoPointManager.expectMsg(Create(GeoPointInputsWithPlotId(geoPointInput, 2l)))
-      geoPointManager.reply(Vector(point))
+      geoPointManager.reply(GeoPoints(Vector(point)))
 
       openWeatherClient.expectMsg(FetchWeatherForGeoPoint(Vector(point)))
       openWeatherClient.reply(GeoPointsWithWeather(updatedWeather))

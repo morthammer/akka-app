@@ -35,12 +35,12 @@ class GeoPlotLookup(pointLookup: ActorRef) extends Actor with ActorLogging  {
       case Failure(ex) => log.error("Exception fetching plot by cookie [" + token + "] is" + ex.getMessage)
     }
 
-    val geoPoints: Future[Vector[GeoPoint]] = geoPlotOpt.flatMap{p => p.fold(Future.successful(Vector[GeoPoint]()))(geoPlot => fetchGeoPoints(geoPlot.id))}
-     geoPoints.flatMap(geoPoints => geoPlotOpt.map(_.map(geoPlot => geoPlot.copy(points = geoPoints))))
+    val geoPoints: Future[GeoPoints] = geoPlotOpt.flatMap{p => p.fold(Future.successful(GeoPoints(Vector[GeoPoint]())))(geoPlot => fetchGeoPoints(geoPlot.id))}
+     geoPoints.flatMap(geoPoints => geoPlotOpt.map(_.map(_.copy(points = geoPoints.points))))
   }
 
-  def fetchGeoPoints(plotId: Long): Future[Vector[GeoPoint]] = {
-    (pointLookup ? FindByPlotId(plotId)).mapTo[Vector[GeoPoint]]
+  def fetchGeoPoints(plotId: Long): Future[GeoPoints] = {
+    (pointLookup ? FindByPlotId(plotId)).mapTo[GeoPoints]
   }
 }
 
@@ -50,7 +50,6 @@ object GeoPlotLookupDAO {
 
 class GeoPlotLookupDAO extends DatabaseAccess{
   import GeoPlotLookupDAO._
-  def log = LoggerFactory.getLogger(this.getClass)
 
   def selectByToken(token: String)(implicit ec: ExecutionContext):Future[Vector[GeoPlot]] = {
     val stmt = sql"""

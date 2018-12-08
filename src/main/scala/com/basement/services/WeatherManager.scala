@@ -16,8 +16,6 @@ class WeatherManager extends Actor with ActorLogging {
     case Create(weather: Weather) => pipe(createWeather(weather)) to sender()
     case Update(weather: Weather) => pipe(updateWeather(weather)) to sender()
     case Upsert(weather: Weather) => pipe(upsertWeather(weather)) to sender()
-      //TODO eliminated by erasure
-    case Upsert(weather: Option[Weather]) => weather.map(w => upsertWeather(w))
     case Delete(id: Long) => pipe(deleteWeather(id)) to sender()
   }
 

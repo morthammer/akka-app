@@ -22,7 +22,7 @@ class OpenWeatherClientUnitSpec extends TestKit(ActorSystem("MySpec")) with Impl
   val weatherServiceMock = mock[(String) => dispatch.Future[String]]
   val weatherManager = TestProbe()
 
-  val actorRef = TestActorRef(new OpenWeatherClient(weatherManager.ref){
+  val actorRef = TestActorRef(new OpenWeatherClient(system, weatherManager.ref){
     override val weatherService = weatherServiceMock
   })
 

@@ -37,8 +37,8 @@ class GeoPointManagerUnitSpec extends TestKit(ActorSystem("MySpec")) with Implic
       when(mockDAO.insert(GeoPointInput(any[String], any[String], any[Option[BigDecimal]]), plotId)).thenReturn(Future.successful(1))
       actorRef ! Create(pointInput)
       geoPointLookup.expectMsg(FindByPlotId(plotId))
-      geoPointLookup.reply(Vector(point))
-      expectMsg(Vector(point))
+      geoPointLookup.reply(GeoPoints(Vector(point)))
+      expectMsg(GeoPoints(Vector(point)))
     }
     "return failure when insert is failure" in {
       val ex = new Exception("fail")
@@ -51,7 +51,7 @@ class GeoPointManagerUnitSpec extends TestKit(ActorSystem("MySpec")) with Implic
       val gpWithWeather = GeoPointsWithWeather(Vector(pointWithWeather))
       when(mockDAO.update(pointWithWeather)).thenReturn(Future.successful(1))
       actorRef ! Update(gpWithWeather)
-      weatherManager.expectMsg(Upsert(Some(weather)))
+      weatherManager.expectMsg(Upsert(weather))
       expectMsg(Vector(OperationResult(true)))
     }
     "return failure when update point and weather fails" in {

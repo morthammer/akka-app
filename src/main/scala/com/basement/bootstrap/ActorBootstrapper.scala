@@ -14,7 +14,7 @@ class ActorBootstrapper {
     implicit val mat = akka.stream.ActorMaterializer()
     implicit val executionContext = system.dispatcher
 
-    //startActors(system)
+    //create Actors
     val weatherManager = WeatherManager(system)
     val openWeatherClient = OpenWeatherClient(system, weatherManager)
     val geoPointLookup = GeoPointLookup(system)

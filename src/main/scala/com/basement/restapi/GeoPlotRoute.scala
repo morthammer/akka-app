@@ -5,33 +5,36 @@ import akka.http.scaladsl.model.HttpResponse
 import akka.http.scaladsl.model.headers.HttpCookie
 import akka.http.scaladsl.server.Directives._
 import akka.pattern.ask
-import akka.util.Timeout
 import com.basement.bootstrap.PathLookup
 import com.basement.domain._
 import com.basement.services.TokenSupport
 import akka.http.scaladsl.model.StatusCodes._
+import com.basement.FSM.PlotWorker.RequestFormatException
+import org.slf4j.LoggerFactory
 
-import scala.concurrent.duration._
 import scala.util.{Failure, Success}
 
 trait GeoPlotRoutes extends JsonSupport with PathLookup with TokenSupport {
 
   implicit val system: ActorSystem
-  implicit val timeout = Timeout(5 seconds)
+  val log = LoggerFactory.getLogger(this.getClass)
 
-  //TODO geoPlotLOokup isn't used
   def routes(plotHandler: ActorRef) =
     path("plot") {
-      (get & optionalCookie("weathertracker")) { (opCookie) =>
-        complete(((plotHandler ? IdentifyGeoPlot(opCookie)).mapTo[GeoPlot]))
+      (get & cookie("weathertracker")) { cookie =>
+        onComplete(plotHandler ? IdentifyGeoPlot(cookie)){
+          case Success(plot: GeoPlot) => complete(plot)
+          case Success(Failure(RequestFormatException(msg))) => complete(HttpResponse(BadRequest, entity = msg))
+          case _ => complete(HttpResponse(InternalServerError))
+        }
       } ~
       post {
         entity(as[GeoPointInputs]) {
           plotIn => {
-            //TODO add in circuit breaker to onCOmplete!!!!!
-            onComplete((plotHandler ? CreateGeoPlot(plotIn)).mapTo[GeoPlot]){
-              case Success(plot) => setCookie(HttpCookie("weathertracker", plot.token)) {complete(plot)}
-              case Failure(ex) => complete(HttpResponse(InternalServerError, entity = ex.getMessage))
+            onComplete((plotHandler ? CreateGeoPlot(plotIn))){
+              case Success(plot: GeoPlot) => setCookie(HttpCookie("weathertracker", plot.token)) (complete(plot))
+              case Success(Failure(RequestFormatException(msg))) => complete(HttpResponse(BadRequest, entity = msg))
+              case _ => complete(HttpResponse(InternalServerError))
             }
           }
         }

@@ -34,7 +34,7 @@ class GeoPlotLookupUnitSpec extends TestKit(ActorSystem("MySpec")) with Implicit
       when(mockDAO.selectByToken(token)).thenReturn(Future.successful(Vector(geoPlot)))
       actorRef ! FindByToken(token)
       geoLookupProbe.expectMsg(FindByPlotId(1l))
-      geoLookupProbe.reply(Vector(point))
+      geoLookupProbe.reply(GeoPoints(Vector(point)))
       expectMsg(Some(geoPlot))
     }
     "return none when token doesn't exist" in {

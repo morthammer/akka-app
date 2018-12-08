@@ -47,6 +47,8 @@ object PlotWorker {
   val openWeatherConfig =  ConfigFactory.load().getConfig("openWeather")
   val expirationDuration = openWeatherConfig.getDuration("expirationDuration")
 
+  case class RequestFormatException(msg: String) extends Exception
+
   def apply(system: ActorSystem, dependencies: FSMModel.Dependencies) = {
     system.actorOf(Props(classOf[PlotWorker], dependencies))
   }
@@ -58,15 +60,15 @@ class PlotWorker(dependencies: Dependencies) extends FSM[PlotWorker.FSMModel.Sta
   startWith(Idle, Uninitialized)
 
   when(Idle){
-    case Event(IdentifyGeoPlot(Some(cookie)), Uninitialized) =>
+    case Event(IdentifyGeoPlot(cookie), Uninitialized) =>
       val sendingActorRef = sender()
       dependencies.geoPlotLookup ! FindByToken(cookie.value)
       goto(FetchingGeoPlot) using RespondData(sendingActorRef)
-    case Event(CreateGeoPlot(geoPlotInputs: GeoPointInputs), Uninitialized) =>
+    case Event(CreateGeoPlot(geoPointInputs: GeoPointInputs), Uninitialized) =>
       val sendingActorRef = sender()
       val token = createToken
       dependencies.geoPlotManager ! CreatePlotId(token)
-      goto(CreatingGeoPlot) using GeoPlotInputsData(geoPlotInputs, token, sendingActorRef)
+      goto(CreatingGeoPlot) using GeoPlotInputsData(geoPointInputs, token, sendingActorRef)
   }
 
   when(FetchingGeoPlot){
@@ -80,6 +82,10 @@ class PlotWorker(dependencies: Dependencies) extends FSM[PlotWorker.FSMModel.Sta
         data.respondToActor ! geoPlot
         stop
       }
+    case Event(None, data: RespondData) =>
+      log.error("No plot found")
+      data.respondToActor ! Failure(RequestFormatException("Plot could not be found"))
+      stop
   }
 
   when(CreatingGeoPlot){
@@ -89,9 +95,9 @@ class PlotWorker(dependencies: Dependencies) extends FSM[PlotWorker.FSMModel.Sta
   }
 
   when(CreatingGeoPoints){
-    case Event(geoPoints: Vector[GeoPoint], data: GeoPlotInputsDataWithPlotId) =>
-      dependencies.openWeatherClient ! FetchWeatherForGeoPoint(geoPoints)
-    goto(FetchingWeather) using GeoPlotData(GeoPlot(data.plotId, data.token, geoPoints), data.respondToActor)
+    case Event(geoPoints:GeoPoints, data: GeoPlotInputsDataWithPlotId) =>
+      dependencies.openWeatherClient ! FetchWeatherForGeoPoint(geoPoints.points)
+    goto(FetchingWeather) using GeoPlotData(GeoPlot(data.plotId, data.token, geoPoints.points), data.respondToActor)
   }
 
   when(FetchingWeather){
@@ -99,6 +105,10 @@ class PlotWorker(dependencies: Dependencies) extends FSM[PlotWorker.FSMModel.Sta
       dependencies.geoPointManager ! Update(updatedGeoPoints)
       val geoPlotWithUpdatedPoints = data.geoPlot.copy(points = data.geoPlot.points.filterNot(p => updatedGeoPoints.geoPoints.map(_.id).contains(p.id)) ++ updatedGeoPoints.geoPoints)
       data.respondToActor ! geoPlotWithUpdatedPoints
+      stop
+    case Event(ev, data: GeoPlotData) =>
+      log.error(s"No weather found for points ${data.geoPlot.points}, msg $ev")
+      data.respondToActor ! Failure(RequestFormatException("Weather could not be found"))
       stop
   }
 

@@ -20,18 +20,18 @@ class GeoPointManager(weatherManager: ActorRef, geoPointLookup: ActorRef) extend
   def receive = {
     case Create(pointInputsWithPlotId: GeoPointInputsWithPlotId) => pipe(createPointsWithPlotId(pointInputsWithPlotId)) to sender()
     case Update(point: GeoPoint) => pipe(updatePoint(point)) to sender()
-    case Update(geoPointsWithWeather: GeoPointsWithWeather) => pipe(updatePoints(geoPointsWithWeather.geoPoints)) to sender() //Fire and forget
+    case Update(geoPointsWithWeather: GeoPointsWithWeather) => pipe(updatePoints(geoPointsWithWeather.geoPoints)) to sender()
     case Delete(id: Long) => pipe(deletePoint(id)) to sender()
   }
 
-  def createPointsWithPlotId(geoPointInputsWithPlotId: GeoPointInputsWithPlotId): Future[Vector[GeoPoint]] = {
+  def createPointsWithPlotId(geoPointInputsWithPlotId: GeoPointInputsWithPlotId): Future[GeoPoints] = {
     import akka.pattern.ask
 
     val geoPointInputs = geoPointInputsWithPlotId.geoPointInputs
     val plotId = geoPointInputsWithPlotId.plotId
     for {
       _ <- Future.traverse(geoPointInputs) (createPoint(plotId))
-      geoPoints <- (geoPointLookup ? FindByPlotId(geoPointInputsWithPlotId.plotId)).mapTo[Vector[GeoPoint]]
+      geoPoints <- (geoPointLookup ? FindByPlotId(geoPointInputsWithPlotId.plotId)).mapTo[GeoPoints]
     } yield geoPoints
   }
 
@@ -47,13 +47,11 @@ class GeoPointManager(weatherManager: ActorRef, geoPointLookup: ActorRef) extend
   }
 
   def updatePoint(point: GeoPoint): Future[OperationResult] = {
-    val updateResult = dao.update(point).map(_ => OperationResult(true)) andThen {
+    dao.update(point).map(_ => OperationResult(true)) andThen {
+      case Success(OperationResult(true)) =>
+        point.weather.foreach(weatherManager ! Upsert(_))
       case Failure(e) =>
         log.error("UPDATE FAILED: [" + e.getMessage + "]" + ".  FOR POINT [" + point + "]")
-    }
-
-    updateResult.andThen {
-      case Success(OperationResult(true)) => weatherManager ! Upsert(point.weather)
     }
   }
 

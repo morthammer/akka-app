@@ -21,17 +21,7 @@ class GeoPlotRouteUnitSpec extends WordSpec with Matchers with ScalatestRouteTes
 
     "return success when request for plot with cookie" in {
       val result = Get("/plot") ~> Cookie("weathertracker", "1234-123421312-421332") ~> routes(plotHandler)
-      plotHandlerProbe.expectMsg(IdentifyGeoPlot(Some(wtCookie)))
-      plotHandlerProbe.reply(plot)
-
-      check {
-        status shouldEqual StatusCodes.OK
-        responseAs[GeoPlot] shouldEqual plot
-      }(result)
-    }
-    "return success when request for plot with no cookie" in {
-      val result = Get("/plot") ~> routes(plotHandler)
-      plotHandlerProbe.expectMsg(IdentifyGeoPlot(None))
+      plotHandlerProbe.expectMsg(IdentifyGeoPlot(wtCookie))
       plotHandlerProbe.reply(plot)
 
       check {

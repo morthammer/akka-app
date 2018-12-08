@@ -28,7 +28,7 @@ class GeoPointLookup extends Actor with ActorLogging  {
   }
 
   def selectById(id: Long) = {
-    dao.selectPoints(id).map(_.headOption).andThen {
+    dao.selectPoint(id).map(_.points.headOption).andThen {
       case Failure(ex) => log.error("Exception fetching point id [" + id + "] is" + ex.getMessage)
     }
   }
@@ -57,36 +57,34 @@ object GeoPointLookupDAO {
 }
 
 class GeoPointLookupDAO extends DatabaseAccess{
-  //TODO refactor so the implicits don't need to be explicity passed
-  import GeoPlotLookupDAO._
   def log = LoggerFactory.getLogger(this.getClass)
 
-  def selectPoints(id: Long)(implicit ec: ExecutionContext):Future[Seq[GeoPoint]] = {
+  def selectPoint(id: Long)(implicit ec: ExecutionContext):Future[GeoPoints] = {
     val stmt = sql"""
-       select p.id, p.plotId, p.city, p.state, p.timstamp, p.weatherId, w.currentTemp, w.tempMin, w.tempMax, w.timestamp, w.pressure, w.humidity, w.description, w.windSpeed
+       select p.id, p.plotId, p.city, p.state, p.timestamp, p.weatherId, w.currentTemp, w.tempMin, w.tempMax, w.timestamp, w.pressure, w.humidity, w.description, w.windSpeed
        from point p
        left join weather w on w.id = p.weatherId
        where p.id = ${id}""".as[GeoPoint](rconv = GeoPointLookupDAO.getPointResult)
-    db.run(stmt)
+    db.run(stmt).map(GeoPoints.apply)
   }
 
-  def selectAllPoints(implicit ec: ExecutionContext):Future[Seq[GeoPoint]] = {
+  def selectAllPoints(implicit ec: ExecutionContext):Future[GeoPoints] = {
     val stmt = sql"""
          select p.id, p.plotId, p.city, p.state, p.timestamp, p.weatherId, w.currentTemp, w.tempMin, w.tempMax, w.pressure, w.timestamp, w.humidity, w.description, w.windSpeed
          from point p
          left join weather w on w.id = p.weatherId
         """.as[GeoPoint](rconv = GeoPointLookupDAO.getPointResult)
-    db.run(stmt)
+    db.run(stmt).map(GeoPoints.apply)
   }
 
-  def selectPointsByPlotId(plotId: Long)(implicit ec: ExecutionContext): Future[Seq[GeoPoint]] = {
+  def selectPointsByPlotId(plotId: Long)(implicit ec: ExecutionContext): Future[GeoPoints] = {
     val stmt =
     sql"""select p.id, p.plotId, p.city, p.state, p.timestamp, p.weatherId, w.currentTemp, w.tempMin, w.tempMax, w.pressure, w.timestamp, w.humidity, w.description, w.windSpeed
          from point p
          left join weather w on w.id = p.weatherId
          where p.plotId = ${plotId}
        """.as[GeoPoint](rconv = GeoPointLookupDAO.getPointResult)
-    db.run(stmt)
+    db.run(stmt).map(GeoPoints.apply)
   }
 }
 

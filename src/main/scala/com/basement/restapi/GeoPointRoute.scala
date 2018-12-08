@@ -9,24 +9,14 @@ import com.basement.domain._
 import com.basement.services.{GeoPlotLookup, GeoPlotManager}
 
 import scala.concurrent.duration._
-//TODO doesn't need path lookup trait mixed in anymore
 trait GeoPointRoute extends JsonSupport with PathLookup {
   implicit val system: ActorSystem
-  implicit val timeout = Timeout(5 seconds)
 
   def routes(geoPointLookup: ActorRef, geoPointManager: ActorRef) =
     path("points") {
       get {
-        complete((geoPointLookup ? FindAll).mapTo[Vector[GeoPoint]])
+        complete((geoPointLookup ? FindAll).mapTo[GeoPoints])
         }
-    } ~
-    path("point"){
-      post {
-        entity(as[GeoPointInput]) {
-          pInput => {
-            complete((geoPointManager ? Create[GeoPointInput](pInput)).mapTo[OperationResult])}
-        }
-      }
     } ~
     pathPrefix("point" / LongNumber){
       id =>
