@@ -1,10 +1,10 @@
 # AKKA HTTP Weather Fetching App
 
-Simple Akka Http application to fetch weather
+Simple Akka Http application to fetch weather for city/state and recall the search with a cookie stored on the client side
 
 ## Getting Started
 
-These instructions will get you a copy of the project up and running on your local machine for development and testing purposes. See deployment for notes on how to deploy the project on a live system.
+The environment is assumed to be *nix
 
 ### Prerequisites
 
@@ -23,67 +23,46 @@ A step by step series of examples that tell you how to get a development env run
 Clone project from git
 
 ```
-Give the example
+git clone https://github.com/morthammer/akka-app.git
 ```
 
-And repeat
+change directory into akka-app
 
 ```
-until finished
+cd akka-app
 ```
 
-End with an example of getting some data out of the system or using it for a little demo
+run the project with sbt
+
+```
+sbt clean run
+```
+
+The main functionality of the app is exposed file GeoPlotRoute which has 2 endpoints, a get and a post to http://localhost:8080/plot
+
+Here are some example api calls:
+
+```
+curl -X POST \
+  http://localhost:8080/plot \
+  -H 'Cache-Control: no-cache' \
+  -H 'Content-Type: application/json' \
+  -d '{
+	"geoInputPoints": [
+	{"city": "Seattle","state": "WA"},
+	{"city": "Miami","state": "FL"}
+	]
+      }'
+```
+
+```
+curl -v --cookie "weathertracker={your_token_value_from_above}" -X GET http://localhost:8080/plot
+```
 
 ## Running the tests
 
-Explain how to run the automated tests for this system
-
-### Break down into end to end tests
-
-Explain what these tests test and why
+The unit tests can be run from the root akka-app directory using sbt with the command
 
 ```
-Give an example
+sbt test
 ```
-
-### And coding style tests
-
-Explain what these tests test and why
-
-```
-Give an example
-```
-
-## Deployment
-
-Add additional notes about how to deploy this on a live system
-
-## Built With
-
-* [Dropwizard](http://www.dropwizard.io/1.0.2/docs/) - The web framework used
-* [Maven](https://maven.apache.org/) - Dependency Management
-* [ROME](https://rometools.github.io/rome/) - Used to generate RSS Feeds
-
-## Contributing
-
-Please read [CONTRIBUTING.md](https://gist.github.com/PurpleBooth/b24679402957c63ec426) for details on our code of conduct, and the process for submitting pull requests to us.
-
-## Versioning
-
-We use [SemVer](http://semver.org/) for versioning. For the versions available, see the [tags on this repository](https://github.com/your/project/tags).
-
-## Authors
-
-* **Billie Thompson** - *Initial work* - [PurpleBooth](https://github.com/PurpleBooth)
-
-See also the list of [contributors](https://github.com/your/project/contributors) who participated in this project.
-
-## License
-
-This project is licensed under the MIT License - see the [LICENSE.md](LICENSE.md) file for details
-
-## Acknowledgments
-
-* Hat tip to anyone whose code was used
-* Inspiration
-* etc
