@@ -26,7 +26,7 @@ class OpenWeatherClientUnitSpec extends TestKit(ActorSystem("MySpec")) with Impl
     override val weatherService = weatherServiceMock
   })
 
-  val weatherResult = WeatherAPIResult(Coordinates(-0.13,51.51),List(WeatherAPI(300,"Drizzle","light intensity drizzle","09d")),"stations",Main(280.32,1012,81,279.15,281.15),10000,Wind(4.1,80),Clouds(90),1485789600,System(1,5091,0.0103,"GB",1485762037,1485794875),2643743,"London",200)
+  val weatherResult = WeatherAPIResult(Coordinates(-0.13,51.51),List(WeatherAPI(300,"Drizzle","light intensity drizzle","09d")),"stations",Main(280.32,1012,81,279.15,281.15),10000,Some(Wind(4.1,80)),Some(Clouds(90)),1485789600,System(1,5091,0.0103,"GB",1485762037,1485794875),2643743,"London",200)
 
   val jsonResponse = """{"coord":{"lon":-0.13,"lat":51.51},"weather":[{"id":300,"main":"Drizzle","description":"light intensity drizzle","icon":"09d"}],"base":"stations","main":{"temp":280.32,"pressure":1012,"humidity":81,"temp_min":279.15,"temp_max":281.15},"visibility":10000,"wind":{"speed":4.1,"deg":80},"clouds":{"all":90},"dt":1485789600,"sys":{"type":1,"id":5091,"message":0.0103,"country":"GB","sunrise":1485762037,"sunset":1485794875},"id":2643743,"name":"London","cod":200}"""
 

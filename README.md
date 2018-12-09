@@ -8,8 +8,6 @@ The environment is assumed to be *nix
 
 ### Prerequisites
 
-What things you need to install the software and how to install them
-
 ```
 sbt 0.13
 java 1.8
@@ -17,8 +15,6 @@ scala 2.12
 ```
 
 ### Installing
-
-A step by step series of examples that tell you how to get a development env running
 
 Clone project from git
 
