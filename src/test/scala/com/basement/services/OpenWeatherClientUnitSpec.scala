@@ -1,13 +1,13 @@
 package com.basement.services
 
-import akka.actor.ActorSystem
+import akka.actor.{ActorSystem, Status}
 import akka.testkit.{ImplicitSender, TestActorRef, TestKit, TestProbe}
 import com.basement.domain._
 import org.mockito.Mockito._
 import org.scalatest.mockito.MockitoSugar
 import org.scalatest.{BeforeAndAfterAll, Matchers, WordSpecLike}
-import scala.concurrent.duration._
 
+import scala.concurrent.duration._
 import scala.concurrent.Future
 
 class OpenWeatherClientUnitSpec extends TestKit(ActorSystem("MySpec")) with ImplicitSender
@@ -22,8 +22,12 @@ class OpenWeatherClientUnitSpec extends TestKit(ActorSystem("MySpec")) with Impl
   val weatherServiceMock = mock[(String) => dispatch.Future[String]]
   val weatherManager = TestProbe()
 
+  def notifyOpen = println("Circuit breaker open")
+  val testBreaker = new akka.pattern.CircuitBreaker(system.scheduler, maxFailures = 1, callTimeout = 10.seconds, resetTimeout = 1.minute).onOpen(notifyOpen)
+
   val actorRef = TestActorRef(new OpenWeatherClient(system, weatherManager.ref){
     override val weatherService = weatherServiceMock
+    override val breaker = testBreaker
   })
 
   val weatherResult = WeatherAPIResult(Coordinates(-0.13,51.51),List(WeatherAPI(300,"Drizzle","light intensity drizzle","09d")),"stations",Main(280.32,1012,81,279.15,281.15),10000,Some(Wind(4.1,80)),Some(Clouds(90)),1485789600,System(1,5091,0.0103,"GB",1485762037,1485794875),2643743,"London",200)
@@ -39,6 +43,13 @@ class OpenWeatherClientUnitSpec extends TestKit(ActorSystem("MySpec")) with Impl
       expectMsgPF(1 second, ""){
         case GeoPointsWithWeather(Vector(p)) => assert(p.weather.get.copy(timestamp = 1l) == OpenWeatherClient.toWeather(weatherResult).copy(timestamp = 1l))
       }
+    }
+    "return failure with circuit breaker open" in {
+      val ex = new Exception("API Failure")
+      when(weatherServiceMock("Boston")).thenReturn(Future.failed(ex))
+      actorRef ! FetchWeatherForGeoPoint(Vector(point))
+      expectMsg(Status.Failure(ex))
+      testBreaker.isOpen shouldBe(true)
     }
   }
 }
